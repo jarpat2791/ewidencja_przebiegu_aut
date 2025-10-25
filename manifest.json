@@ -1,0 +1,24 @@
+{
+  "name": "Ewidencja Przebiegu Samochodów",
+  "short_name": "Ewidencja Aut",
+  "description": "Aplikacja do ewidencji przebiegu samochodów służbowych",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#c2e1ff",
+  "theme_color": "#5497c4",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

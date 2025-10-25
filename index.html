@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Meta tagi dla PWA -->
+<meta name="theme-color" content="#5497c4" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ewidencja Aut">
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-512.png">
+
+<title>Ewidencja przebiegu samochodów służbowych</title>
+<style>
+  * { box-sizing: border-box; }
+  body { 
+    font-family: Arial, sans-serif; 
+    margin: 0;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+  h1 { 
+    text-align: center; 
+    font-size: 1.5em;
+    margin: 10px 0;
+  }
+  h2 {
+    font-size: 1.2em;
+    margin: 15px 0 10px 0;
+  }
+  select, input { 
+    margin: 5px 0;
+    padding: 10px;
+    width: 100%;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  label {
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  button {
+    background-color: #5497c4;
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    cursor: pointer;
+    margin: 5px 2px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    min-height: 44px;
+  }
+  button:hover {
+    background-color: #006fb9;
+  }
+  button:active {
+    transform: scale(0.98);
+  }
+  button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+  table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-top: 15px;
+    font-size: 14px;
+  }
+  th, td { 
+    border: 1px solid #ccc; 
+    padding: 8px 4px; 
+    text-align: center;
+    word-wrap: break-word;
+  }
+  th {
+    background-color: #5497c4;
+    color: white;
+    position: sticky;
+    top: 0;
+  }
+  .container { 
+    max-width: 1000px; 
+    margin: auto;
+    background-color: #c2e1ff;
+    padding: 15px;
+    border-radius: 5px;
+  }
+  
+  @media (max-width: 600px) {
+    body { padding: 5px; }
+    .container { padding: 10px; }
+    h1 { font-size: 1.3em; }
+    h2 { font-size: 1.1em; }
+    table { font-size: 12px; }
+    th, td { padding: 6px 2px; }
+    button { 
+      padding: 10px 12px;
+      font-size: 13px;
+      width: 100%;
+      margin: 3px 0;
+    }
+  }
+  
+  #installPrompt {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #5497c4;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 2000;
+    display: none;
+    max-width: 90%;
+    text-align: center;
+  }
+  #installPrompt button {
+    margin: 5px;
+  }
+  
+  .status-indicator {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    margin-left: 10px;
+  }
+  .status-online {
+    background-color: #4CAF50;
+    color: white;
+  }
+  .status-offline {
+    background-color: #ff9800;
+    color: white;
+  }
+  .sync-status {
+    text-align: center;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+  .sync-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  .sync-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  .sync-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+  }
+</style>
+</head>
+<body>
+
+<div id="installPrompt">
+  <p><strong>Zainstaluj aplikację na swoim urządzeniu!</strong></p>
+  <button id="installButton">Zainstaluj</button>
+  <button id="dismissButton" style="background-color: #999;">Później</button>
+</div>
+
+<div class="container">
+<h1>
+  Ewidencja przebiegu samochodów służbowych
+  <span id="statusIndicator" class="status-indicator status-offline">Tryb lokalny</span>
+</h1>
+
+<div id="syncStatus" class="sync-status sync-info" style="display:none;"></div>
+
+<h2>Dodaj nowy wpis</h2>
+<form id="tripForm">
+  <label for="employee">Nazwisko pracownika:</label>
+  <input type="text" id="employee" placeholder="Wpisz nazwisko" required/><br/>
+
+  <label for="vehicle">Samochód:</label>
+  <select id="vehicle" required>
+    <option value="Skoda Octavia RZ1">Skoda Octavia RZ1</option>
+    <option value="Skoda Octavia RZ2">Skoda Octavia RZ2</option>
+    <option value="Skoda Octavia RZ3">Skoda Octavia RZ3</option>
+    <option value="Skoda Superb RZ4">Skoda Superb RZ4</option>
+  </select><br/>
+
+  <label for="date">Data:</label>
+  <input type="date" id="date" required/><br/>
+
+  <label for="start">Przed wyjazdem (km):</label>
+  <input type="number" id="start" required/><br/>
+
+  <label for="end">Po powrocie (km):</label>
+  <input type="number" id="end" required/><br/>
+
+  <button type="submit">Zapisz wpis</button>
+</form>
+
+<h2>Opcje</h2>
+<button onclick="showSummary()">Wyświetl podsumowania</button>
+<button onclick="exportCSV()">Eksport do CSV</button>
+<button onclick="showArchiveDialog()">Archiwum</button>
+<button onclick="syncWithSheets()" id="syncButton">🔄 Synchronizuj z Google Sheets</button>
+<button onclick="clearEntries()">Usuń wszystkie wpisy</button>
+
+<div id="archiveDialog" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:1000; max-width:500px;">
+  <h3>Archiwizacja danych</h3>
+  <p>Wybierz zakres dat do przeniesienia do archiwum:</p>
+  <label>Data od:</label>
+  <input type="date" id="archiveFrom" style="display:block; width:100%; margin-bottom:10px;"/><br/>
+  <label>Data do:</label>
+  <input type="date" id="archiveTo" style="display:block; width:100%; margin-bottom:20px;"/><br/>
+  <button onclick="archiveEntries()">Przenieś do archiwum</button>
+  <button onclick="showArchive()">Pokaż archiwum</button>
+  <button onclick="closeArchiveDialog()">Anuluj</button>
+</div>
+
+<div id="overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;" onclick="closeArchiveDialog()"></div>
+
+<div id="archiveView" style="display:none;">
+  <h2>Archiwum <button onclick="hideArchive()">Zamknij archiwum</button></h2>
+  <div id="archiveEntries"></div>
+  <button onclick="restoreFromArchive()">Przywróć wszystkie z archiwum</button>
+  <button onclick="clearArchive()">Usuń całe archiwum</button>
+</div>
+
+<div id="summary"></div>
+
+<h2>Historia wpisów</h2>
+<div id="entries"></div>
+</div>
+
+<script>
+// ====== KONFIGURACJA GOOGLE SHEETS ======
+// WAŻNE: Zamień poniższy URL na URL swojego wdrożenia Google Apps Script!
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqjW_kVdYgyKFtJwCabLLoxxD6wi2GjPv-vryWgmaD3MrlsCVdCgrKDtS3f2PFqn6P/exec';
+// Przykład: 'https://script.google.com/macros/s/AKfycbx.../exec'
+
+let isOnline = false;
+let syncInProgress = false;
+
+// Sprawdź czy Google Sheets jest skonfigurowany
+function isSheetsConfigured() {
+  return GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbyqjW_kVdYgyKFtJwCabLLoxxD6wi2GjPv-vryWgmaD3MrlsCVdCgrKDtS3f2PFqn6P/exec';
+}
+
+// Funkcje odczytu i zapisu danych lokalnych
+function getData() {
+  const data = localStorage.getItem('carLogs');
+  return data ? JSON.parse(data) : {};
+}
+
+function saveData(data) {
+  localStorage.setItem('carLogs', JSON.stringify(data));
+}
+
+function getArchiveData() {
+  const data = localStorage.getItem('carLogsArchive');
+  return data ? JSON.parse(data) : {};
+}
+
+function saveArchiveData(data) {
+  localStorage.setItem('carLogsArchive', JSON.stringify(data));
+}
+
+// Aktualizacja statusu połączenia
+function updateConnectionStatus() {
+  const indicator = document.getElementById('statusIndicator');
+  if (isSheetsConfigured() && isOnline) {
+    indicator.textContent = '☁️ Online (Google Sheets)';
+    indicator.className = 'status-indicator status-online';
+  } else {
+    indicator.textContent = '💾 Tryb lokalny';
+    indicator.className = 'status-indicator status-offline';
+  }
+}
+
+// Wyświetl komunikat synchronizacji
+function showSyncStatus(message, type = 'info') {
+  const syncStatus = document.getElementById('syncStatus');
+  syncStatus.textContent = message;
+  syncStatus.className = `sync-status sync-${type}`;
+  syncStatus.style.display = 'block';
+  
+  setTimeout(() => {
+    syncStatus.style.display = 'none';
+  }, 5000);
+}
+
+// Synchronizacja z Google Sheets
+async function syncWithSheets() {
+  if (!isSheetsConfigured()) {
+    alert('Google Sheets nie jest skonfigurowany!\n\nSprawdź instrukcję konfiguracji Google Sheets i wklej URL swojego skryptu w kodzie aplikacji.');
+    return;
+  }
+  
+  if (syncInProgress) {
+    showSyncStatus('Synchronizacja już trwa...', 'info');
+    return;
+  }
+  
+  syncInProgress = true;
+  const syncButton = document.getElementById('syncButton');
+  syncButton.disabled = true;
+  syncButton.textContent = '🔄 Synchronizacja...';
+  
+  try {
+    showSyncStatus('Synchronizacja z Google Sheets...', 'info');
+    
+    // Pobierz lokalne dane
+    const localData = getData();
+    
+    // Wyślij wszystkie wpisy do Sheets
+    for (const vehicle in localData) {
+      for (const entry of localData[vehicle]) {
+        await sendToSheets('addEntry', { entry: {...entry, vehicle} });
+      }
+    }
+    
+    showSyncStatus('✅ Synchronizacja zakończona pomyślnie!', 'success');
+    isOnline = true;
+    updateConnectionStatus();
+  } catch (error) {
+    console.error('Błąd synchronizacji:', error);
+    showSyncStatus('❌ Błąd synchronizacji: ' + error.message, 'error');
+  } finally {
+    syncInProgress = false;
+    syncButton.disabled = false;
+    syncButton.textContent = '🔄 Synchronizuj z Google Sheets';
+  }
+}
+
+// Wysyłanie danych do Google Sheets
+async function sendToSheets(action, data) {
+  if (!isSheetsConfigured()) {
+    return null;
+  }
+  
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action, ...data })
+    });
+    
+    // W trybie no-cors nie możemy czytać odpowiedzi, więc zakładamy sukces
+    isOnline = true;
+    updateConnectionStatus();
+    return { success: true };
+  } catch (error) {
+    console.error('Błąd wysyłania do Sheets:', error);
+    isOnline = false;
+    updateConnectionStatus();
+    throw error;
+  }
+}
+
+// Dodanie nowego wpisu
+document.getElementById('tripForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const employee = document.getElementById('employee').value.trim();
+  const vehicle = document.getElementById('vehicle').value;
+  const date = document.getElementById('date').value;
+  const startKm = parseInt(document.getElementById('start').value);
+  const endKm = parseInt(document.getElementById('end').value);
+
+  if (endKm < startKm) {
+    alert('Koniec odczytu musi być większy od początku!');
+    return;
+  }
+
+  if (!employee) {
+    alert('Proszę wpisać nazwisko pracownika!');
+    return;
+  }
+
+  const data = getData();
+  if (!data[vehicle]) {
+    data[vehicle] = [];
+  }
+
+  const entry = {
+    id: Date.now(),
+    employee: employee,
+    date: date,
+    start: startKm,
+    end: endKm,
+    przebieg: endKm - startKm
+  };
+
+  data[vehicle].push(entry);
+  saveData(data);
+  
+  // Spróbuj zapisać do Google Sheets
+  if (isSheetsConfigured()) {
+    try {
+      await sendToSheets('addEntry', { entry: {...entry, vehicle} });
+      showSyncStatus('✅ Wpis zapisany i zsynchronizowany z Google Sheets', 'success');
+    } catch (error) {
+      showSyncStatus('💾 Wpis zapisany lokalnie (brak połączenia z Google Sheets)', 'info');
+    }
+  } else {
+    alert('Wpis zapisany lokalnie!');
+  }
+  
+  document.getElementById('tripForm').reset();
+  displayEntries();
+});

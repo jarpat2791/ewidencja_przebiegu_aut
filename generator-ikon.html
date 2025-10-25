@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator ikon dla aplikacji</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .preview-box {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .preview {
+            text-align: center;
+            margin: 10px;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #5497c4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #006fb9;
+        }
+        input[type="text"], input[type="color"] {
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        input[type="text"] {
+            width: 100%;
+            max-width: 300px;
+        }
+        .control-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Generator ikon dla aplikacji</h1>
+        
+        <div class="info">
+            <strong>Instrukcja:</strong> Wpisz inicjały lub skrót nazwy firmy, wybierz kolory, a następnie pobierz obie ikony.
+        </div>
+
+        <div class="control-group">
+            <label for="text">Tekst na ikonie (np. inicjały firmy):</label>
+            <input type="text" id="text" value="ES" maxlength="4" placeholder="Np. ABC">
+        </div>
+
+        <div class="control-group">
+            <label for="bgColor">Kolor tła:</label>
+            <input type="color" id="bgColor" value="#5497c4">
+        </div>
+
+        <div class="control-group">
+            <label for="textColor">Kolor tekstu:</label>
+            <input type="color" id="textColor" value="#ffffff">
+        </div>
+
+        <button onclick="generateIcons()">🎨 Wygeneruj ikony</button>
+
+        <div class="preview-box">
+            <div class="preview">
+                <h3>Ikona 192x192</h3>
+                <canvas id="canvas192" width="192" height="192"></canvas>
+                <br>
+                <button onclick="downloadIcon('canvas192', 'icon.png')">⬇️ Pobierz icon.png</button>
+            </div>
+            <div class="preview">
+                <h3>Ikona 512x512</h3>
+                <canvas id="canvas512" width="512" height="512"></canvas>
+                <br>
+                <button onclick="downloadIcon('canvas512', 'icon-512.png')">⬇️ Pobierz icon-512.png</button>
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>💡 Wskazówka:</strong> Po pobraniu obu ikon, wgraj je do swojego repozytorium GitHub razem z pozostałymi plikami aplikacji.
+        </div>
+    </div>
+
+    <script>
+        function generateIcons() {
+            const text = document.getElementById('text').value || 'ES';
+            const bgColor = document.getElementById('bgColor').value;
+            const textColor = document.getElementById('textColor').value;
+
+            // Generuj ikonę 192x192
+            drawIcon('canvas192', 192, text, bgColor, textColor);
+            
+            // Generuj ikonę 512x512
+            drawIcon('canvas512', 512, text, bgColor, textColor);
+        }
+
+        function drawIcon(canvasId, size, text, bgColor, textColor) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+
+            // Tło
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, size, size);
+
+            // Gradient overlay dla lepszego wyglądu
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, 'rgba(255,255,255,0.1)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.1)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Ikona samochodu (prosty kształt)
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            const carWidth = size * 0.6;
+            const carHeight = size * 0.3;
+            const carX = (size - carWidth) / 2;
+            const carY = size * 0.25;
+            
+            // Nadwozie
+            ctx.beginPath();
+            ctx.roundRect(carX, carY, carWidth, carHeight, size * 0.05);
+            ctx.fill();
+            
+            // Kabina
+            ctx.beginPath();
+            ctx.roundRect(carX + carWidth * 0.25, carY - carHeight * 0.4, carWidth * 0.5, carHeight * 0.5, size * 0.03);
+            ctx.fill();
+
+            // Tekst
+            ctx.fillStyle = textColor;
+            ctx.font = `bold ${size * 0.35}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text.toUpperCase(), size / 2, size * 0.7);
+        }
+
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Automatyczne generowanie przy załadowaniu strony
+        window.onload = () => {
+            generateIcons();
+        };
+
+        // Regeneruj przy zmianie wartości
+        document.getElementById('text').addEventListener('input', generateIcons);
+        document.getElementById('bgColor').addEventListener('input', generateIcons);
+        document.getElementById('textColor').addEventListener('input', generateIcons);
+    </script>
+</body>
+</html>
