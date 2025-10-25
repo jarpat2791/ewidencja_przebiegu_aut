@@ -243,19 +243,15 @@
 
 <script>
 // ====== KONFIGURACJA GOOGLE SHEETS ======
-// WAŻNE: Zamień poniższy URL na URL swojego wdrożenia Google Apps Script!
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyqjW_kVdYgyKFtJwCabLLoxxD6wi2GjPv-vryWgmaD3MrlsCVdCgrKDtS3f2PFqn6P/exec';
-// Przykład: 'https://script.google.com/macros/s/AKfycbx.../exec'
+const GOOGLE_SCRIPT_URL = 'WKLEJ_TUTAJ_URL_SWOJEGO_SKRYPTU';
 
 let isOnline = false;
 let syncInProgress = false;
 
-// Sprawdź czy Google Sheets jest skonfigurowany
 function isSheetsConfigured() {
-  return GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbyqjW_kVdYgyKFtJwCabLLoxxD6wi2GjPv-vryWgmaD3MrlsCVdCgrKDtS3f2PFqn6P/exec';
+  return GOOGLE_SCRIPT_URL !== 'WKLEJ_TUTAJ_URL_SWOJEGO_SKRYPTU';
 }
 
-// Funkcje odczytu i zapisu danych lokalnych
 function getData() {
   const data = localStorage.getItem('carLogs');
   return data ? JSON.parse(data) : {};
@@ -274,7 +270,6 @@ function saveArchiveData(data) {
   localStorage.setItem('carLogsArchive', JSON.stringify(data));
 }
 
-// Aktualizacja statusu połączenia
 function updateConnectionStatus() {
   const indicator = document.getElementById('statusIndicator');
   if (isSheetsConfigured() && isOnline) {
@@ -286,7 +281,6 @@ function updateConnectionStatus() {
   }
 }
 
-// Wyświetl komunikat synchronizacji
 function showSyncStatus(message, type = 'info') {
   const syncStatus = document.getElementById('syncStatus');
   syncStatus.textContent = message;
@@ -298,7 +292,6 @@ function showSyncStatus(message, type = 'info') {
   }, 5000);
 }
 
-// Synchronizacja z Google Sheets
 async function syncWithSheets() {
   if (!isSheetsConfigured()) {
     alert('Google Sheets nie jest skonfigurowany!\n\nSprawdź instrukcję konfiguracji Google Sheets i wklej URL swojego skryptu w kodzie aplikacji.');
@@ -318,10 +311,8 @@ async function syncWithSheets() {
   try {
     showSyncStatus('Synchronizacja z Google Sheets...', 'info');
     
-    // Pobierz lokalne dane
     const localData = getData();
     
-    // Wyślij wszystkie wpisy do Sheets
     for (const vehicle in localData) {
       for (const entry of localData[vehicle]) {
         await sendToSheets('addEntry', { entry: {...entry, vehicle} });
@@ -341,7 +332,6 @@ async function syncWithSheets() {
   }
 }
 
-// Wysyłanie danych do Google Sheets
 async function sendToSheets(action, data) {
   if (!isSheetsConfigured()) {
     return null;
@@ -357,7 +347,6 @@ async function sendToSheets(action, data) {
       body: JSON.stringify({ action, ...data })
     });
     
-    // W trybie no-cors nie możemy czytać odpowiedzi, więc zakładamy sukces
     isOnline = true;
     updateConnectionStatus();
     return { success: true };
@@ -372,6 +361,7 @@ async function sendToSheets(action, data) {
 // Dodanie nowego wpisu
 document.getElementById('tripForm').addEventListener('submit', async function(e) {
   e.preventDefault();
+  
   const employee = document.getElementById('employee').value.trim();
   const vehicle = document.getElementById('vehicle').value;
   const date = document.getElementById('date').value;
@@ -420,3 +410,362 @@ document.getElementById('tripForm').addEventListener('submit', async function(e)
   document.getElementById('tripForm').reset();
   displayEntries();
 });
+
+// Wyświetlanie wpisów
+function displayEntries() {
+  const data = getData();
+  const container = document.getElementById('entries');
+  container.innerHTML = '';
+
+  for (const vehicle in data) {
+    const title = document.createElement('h3');
+    title.textContent = vehicle;
+    container.appendChild(title);
+
+    const table = document.createElement('table');
+    const header = document.createElement('tr');
+    header.innerHTML = '<th>Pracownik</th><th>Data</th><th>Start (km)</th><th>Koniec (km)</th><th>Przebieg (km)</th><th>Akcje</th>';
+    table.appendChild(header);
+
+    data[vehicle].forEach((entry) => {
+      const row = document.createElement('tr');
+
+      row.innerHTML = `
+        <td>${entry.employee || '-'}</td>
+        <td>${entry.date}</td>
+        <td>${entry.start}</td>
+        <td>${entry.end}</td>
+        <td>${entry.przebieg}</td>
+        <td>
+          <button onclick="editEntry('${vehicle}', ${entry.id})">Edytuj</button>
+          <button onclick="deleteEntry('${vehicle}', ${entry.id})">Usuń</button>
+        </td>
+      `;
+      row.setAttribute('data-vehicle', vehicle);
+      row.setAttribute('data-id', entry.id);
+      table.appendChild(row);
+    });
+
+    container.appendChild(table);
+  }
+}
+
+// Edycja wpisu
+function editEntry(vehicle, id) {
+  const data = getData();
+  const entryIndex = data[vehicle].findIndex(e => e.id === id);
+  if (entryIndex === -1) return;
+
+  const entry = data[vehicle][entryIndex];
+
+  document.getElementById('employee').value = entry.employee || '';
+  document.getElementById('vehicle').value = vehicle;
+  document.getElementById('date').value = entry.date;
+  document.getElementById('start').value = entry.start;
+  document.getElementById('end').value = entry.end;
+
+  data[vehicle].splice(entryIndex, 1);
+  saveData(data);
+  displayEntries();
+  
+  document.getElementById('tripForm').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Usuwanie wpisu
+async function deleteEntry(vehicle, id) {
+  if (!confirm('Czy na pewno chcesz usunąć ten wpis?')) {
+    return;
+  }
+  
+  const data = getData();
+  data[vehicle] = data[vehicle].filter(e => e.id !== id);
+  saveData(data);
+  
+  if (isSheetsConfigured()) {
+    try {
+      await sendToSheets('deleteEntry', { id: id });
+    } catch (error) {
+      console.error('Błąd usuwania z Sheets:', error);
+    }
+  }
+  
+  displayEntries();
+}
+
+// Podsumowania miesięczne
+function showSummary() {
+  const data = getData();
+  const summaryDiv = document.getElementById('summary');
+  summaryDiv.innerHTML = '';
+
+  const monthTotals = {};
+
+  for (const vehicle in data) {
+    data[vehicle].forEach(entry => {
+      const month = entry.date.slice(0, 7);
+      const employee = entry.employee || 'Nieznany';
+      
+      if (!monthTotals[month]) {
+        monthTotals[month] = {};
+      }
+      
+      const key = `${vehicle} (${employee})`;
+      
+      if (!monthTotals[month][key]) {
+        monthTotals[month][key] = 0;
+      }
+      monthTotals[month][key] += entry.przebieg;
+    });
+  }
+
+  for (const month in monthTotals) {
+    const h3 = document.createElement('h3');
+    h3.textContent = `Miesiąc: ${month}`;
+    summaryDiv.appendChild(h3);
+    const ul = document.createElement('ul');
+    for (const key in monthTotals[month]) {
+      const li = document.createElement('li');
+      li.textContent = `${key}: ${monthTotals[month][key]} km`;
+      ul.appendChild(li);
+    }
+    summaryDiv.appendChild(ul);
+  }
+}
+
+// Eksport do CSV
+function exportCSV() {
+  const data = getData();
+  let csvContent = 'Pracownik,Samochód,Data,Start (km),Koniec (km),Przebieg (km)\n';
+
+  for (const vehicle in data) {
+    data[vehicle].forEach(entry => {
+      const employee = entry.employee || '-';
+      csvContent += `"${employee}","${vehicle}","${entry.date}",${entry.start},${entry.end},${entry.przebieg}\n`;
+    });
+  }
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'przebiegi_samochody.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Czyszczenie wszystkich wpisów
+function clearEntries() {
+  if (confirm('Czy na pewno chcesz usunąć wszystkie wpisy?')) {
+    localStorage.removeItem('carLogs');
+    displayEntries();
+  }
+}
+
+// Dialog archiwizacji
+function showArchiveDialog() {
+  document.getElementById('archiveDialog').style.display = 'block';
+  document.getElementById('overlay').style.display = 'block';
+}
+
+function closeArchiveDialog() {
+  document.getElementById('archiveDialog').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+}
+
+// Archiwizacja wpisów
+async function archiveEntries() {
+  const dateFrom = document.getElementById('archiveFrom').value;
+  const dateTo = document.getElementById('archiveTo').value;
+
+  if (!dateFrom || !dateTo) {
+    alert('Proszę wybrać zakres dat!');
+    return;
+  }
+
+  if (dateFrom > dateTo) {
+    alert('Data "od" nie może być późniejsza niż data "do"!');
+    return;
+  }
+
+  const data = getData();
+  const archiveData = getArchiveData();
+  let movedCount = 0;
+
+  for (const vehicle in data) {
+    if (!archiveData[vehicle]) {
+      archiveData[vehicle] = [];
+    }
+
+    const toArchive = data[vehicle].filter(entry => 
+      entry.date >= dateFrom && entry.date <= dateTo
+    );
+    
+    data[vehicle] = data[vehicle].filter(entry => 
+      entry.date < dateFrom || entry.date > dateTo
+    );
+
+    archiveData[vehicle].push(...toArchive);
+    movedCount += toArchive.length;
+
+    if (data[vehicle].length === 0) {
+      delete data[vehicle];
+    }
+  }
+
+  saveData(data);
+  saveArchiveData(archiveData);
+  
+  if (isSheetsConfigured()) {
+    try {
+      await sendToSheets('archiveEntries', { dateFrom: dateFrom, dateTo: dateTo });
+    } catch (error) {
+      console.error('Błąd archiwizacji w Sheets:', error);
+    }
+  }
+  
+  displayEntries();
+  closeArchiveDialog();
+  
+  alert(`Przeniesiono ${movedCount} wpisów do archiwum.`);
+}
+
+// Pokazywanie archiwum
+function showArchive() {
+  const archiveData = getArchiveData();
+  const container = document.getElementById('archiveEntries');
+  container.innerHTML = '';
+
+  let hasEntries = false;
+  for (const vehicle in archiveData) {
+    if (archiveData[vehicle].length > 0) {
+      hasEntries = true;
+      const title = document.createElement('h3');
+      title.textContent = vehicle + ' (Archiwum)';
+      container.appendChild(title);
+
+      const table = document.createElement('table');
+      const header = document.createElement('tr');
+      header.innerHTML = '<th>Pracownik</th><th>Data</th><th>Start (km)</th><th>Koniec (km)</th><th>Przebieg (km)</th>';
+      table.appendChild(header);
+
+      archiveData[vehicle].forEach((entry) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${entry.employee || '-'}</td>
+          <td>${entry.date}</td>
+          <td>${entry.start}</td>
+          <td>${entry.end}</td>
+          <td>${entry.przebieg}</td>
+        `;
+        table.appendChild(row);
+      });
+
+      container.appendChild(table);
+    }
+  }
+
+  if (!hasEntries) {
+    container.innerHTML = '<p>Archiwum jest puste.</p>';
+  }
+
+  document.getElementById('archiveView').style.display = 'block';
+  closeArchiveDialog();
+}
+
+function hideArchive() {
+  document.getElementById('archiveView').style.display = 'none';
+}
+
+// Przywracanie z archiwum
+async function restoreFromArchive() {
+  if (!confirm('Czy na pewno chcesz przywrócić wszystkie wpisy z archiwum?')) {
+    return;
+  }
+
+  const data = getData();
+  const archiveData = getArchiveData();
+
+  for (const vehicle in archiveData) {
+    if (!data[vehicle]) {
+      data[vehicle] = [];
+    }
+    data[vehicle].push(...archiveData[vehicle]);
+  }
+
+  saveData(data);
+  localStorage.removeItem('carLogsArchive');
+  
+  if (isSheetsConfigured()) {
+    try {
+      await sendToSheets('restoreArchive', {});
+    } catch (error) {
+      console.error('Błąd przywracania w Sheets:', error);
+    }
+  }
+  
+  displayEntries();
+  hideArchive();
+  alert('Wszystkie wpisy zostały przywrócone z archiwum.');
+}
+
+// Czyszczenie archiwum
+function clearArchive() {
+  if (confirm('Czy na pewno chcesz usunąć całe archiwum? Ta operacja jest nieodwracalna!')) {
+    localStorage.removeItem('carLogsArchive');
+    hideArchive();
+    alert('Archiwum zostało usunięte.');
+  }
+}
+
+// Automatyczne wyświetlenie wpisów
+window.onload = () => { 
+  displayEntries();
+  updateConnectionStatus();
+};
+
+// Rejestracja Service Worker dla PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(registration => {
+        console.log('Service Worker zarejestrowany:', registration);
+      })
+      .catch(error => {
+        console.log('Błąd rejestracji Service Worker:', error);
+      });
+  });
+}
+
+// Obsługa instalacji PWA
+let deferredPrompt;
+const installPrompt = document.getElementById('installPrompt');
+const installButton = document.getElementById('installButton');
+const dismissButton = document.getElementById('dismissButton');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installPrompt.style.display = 'block';
+});
+
+installButton.addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Wybór użytkownika: ${outcome}`);
+    deferredPrompt = null;
+    installPrompt.style.display = 'none';
+  }
+});
+
+dismissButton.addEventListener('click', () => {
+  installPrompt.style.display = 'none';
+});
+
+window.addEventListener('appinstalled', () => {
+  installPrompt.style.display = 'none';
+  console.log('PWA została zainstalowana');
+});
+</script>
+</body>
+</html>
