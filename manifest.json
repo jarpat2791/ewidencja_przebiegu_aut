@@ -2,7 +2,7 @@
   "name": "Ewidencja Przebiegu Samochodów",
   "short_name": "Ewidencja Aut",
   "description": "Aplikacja do ewidencji przebiegu samochodów służbowych",
-  "start_url": "/index.html",
+  "start_url": "/ewidencja_przebiegu_aut",
   "display": "standalone",
   "background_color": "#c2e1ff",
   "theme_color": "#5497c4",
@@ -21,4 +21,5 @@
       "purpose": "any maskable"
     }
   ]
+
 }
