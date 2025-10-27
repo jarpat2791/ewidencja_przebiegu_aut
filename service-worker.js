@@ -1,10 +1,10 @@
-const CACHE_NAME = 'ewidencja-aut-v1';
+const CACHE_NAME = 'ewidencja_przebiegu_aut-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.png',
-  '/icon-512.png'
+  '/ewidencja_przebiegu_aut/',
+  '/ewidencja_przebiegu_aut/index.html',
+  '/ewidencja_przebiegu_aut/manifest.json',
+  '/ewidencja_przebiegu_aut/icon.png',
+  '/ewidencja_przebiegu_aut/icon-512.png'
 ];
 
 // Instalacja Service Worker
@@ -69,4 +69,5 @@ self.addEventListener('fetch', event => {
           });
       })
   );
+
 });
